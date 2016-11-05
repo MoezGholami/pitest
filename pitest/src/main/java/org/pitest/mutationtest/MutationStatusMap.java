@@ -16,13 +16,8 @@ package org.pitest.mutationtest;
 
 import static org.pitest.functional.prelude.Prelude.putToMap;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
@@ -32,6 +27,7 @@ import org.pitest.mutationtest.engine.MutationDetails;
 public class MutationStatusMap {
 
   private final Map<MutationDetails, MutationStatusTestPair> mutationMap = new HashMap<MutationDetails, MutationStatusTestPair>();
+  private List<MutationResult> allMutationResults = new ArrayList<MutationResult>();
 
   public void setStatusForMutation(final MutationDetails mutation,
       final DetectionStatus status) {
@@ -41,6 +37,8 @@ public class MutationStatusMap {
   public void setStatusForMutation(final MutationDetails mutation,
       final MutationStatusTestPair status) {
     this.mutationMap.put(mutation, status);
+    if(status.getKillingTest().hasSome())
+      allMutationResults.add(new MutationResult(mutation, status));
   }
 
   public void setStatusForMutations(
@@ -50,8 +48,14 @@ public class MutationStatusMap {
   }
 
   public List<MutationResult> createMutationResults() {
-    return FCollection.map(this.mutationMap.entrySet(),
-        detailsToMutationResults());
+    System.err.println("moez: in getting mutation results:: \n"+allMutationResults);
+    List<MutationResult> returnValue = new ArrayList<MutationResult>();
+    returnValue.addAll(allMutationResults);
+    for(MutationDetails m : mutationMap.keySet())
+      if(mutationMap.get(m).getKillingTest().hasNone())
+        returnValue.add(new MutationResult(m, mutationMap.get(m)));
+
+    return returnValue;
 
   }
 
@@ -71,18 +75,6 @@ public class MutationStatusMap {
 
   public Set<MutationDetails> allMutations() {
     return this.mutationMap.keySet();
-  }
-
-  private static F<Entry<MutationDetails, MutationStatusTestPair>, MutationResult> detailsToMutationResults() {
-    return new F<Entry<MutationDetails, MutationStatusTestPair>, MutationResult>() {
-
-      @Override
-      public MutationResult apply(
-          final Entry<MutationDetails, MutationStatusTestPair> a) {
-        return new MutationResult(a.getKey(), a.getValue());
-      }
-
-    };
   }
 
   private static F<Entry<MutationDetails, MutationStatusTestPair>, MutationDetails> toMutationDetails() {

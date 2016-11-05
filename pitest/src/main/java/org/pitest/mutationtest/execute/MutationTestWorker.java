@@ -16,6 +16,8 @@ package org.pitest.mutationtest.execute;
 
 import static org.pitest.util.Unchecked.translateCheckedException;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,6 +70,7 @@ public class MutationTestWorker {
 
   protected void run(final Collection<MutationDetails> range, final Reporter r,
       final TimeOutDecoratedTestSource testSource) throws IOException {
+    try{ throw new RuntimeException("moez: detecting std out/err call chain");}catch (Throwable e) {e.printStackTrace();}
 
     for (final MutationDetails mutation : range) {
       if (DEBUG) {
@@ -103,36 +106,39 @@ public class MutationTestWorker {
 
     r.describe(mutationId);
 
-    final MutationStatusTestPair mutationDetected = handleMutation(
+    final List<MutationStatusTestPair> mutationsDetected = handleMutation(
         mutationDetails, mutatedClass, relevantTests);
-
-    r.report(mutationId, mutationDetected);
+    for (MutationStatusTestPair mstp : mutationsDetected) {
+        r.report(mutationId, mstp);
+		ExtraResultWriter.getInstance().writeMutationReport(mutationDetails, mstp);
+    }
     if (DEBUG) {
-      LOG.fine("Mutation " + mutationId + " detected = " + mutationDetected);
+      LOG.fine("Mutation " + mutationId + " detected = " + mutationsDetected);
     }
   }
 
-  private MutationStatusTestPair handleMutation(
+  private List<MutationStatusTestPair> handleMutation(
       final MutationDetails mutationId, final Mutant mutatedClass,
       final List<TestUnit> relevantTests) {
-    MutationStatusTestPair mutationDetected;
+    List<MutationStatusTestPair> mutationsDetected;
     if ((relevantTests == null) || relevantTests.isEmpty()) {
       LOG.info("No test coverage for mutation  " + mutationId + " in "
           + mutatedClass.getDetails().getMethod());
-      mutationDetected = new MutationStatusTestPair(0,
-          DetectionStatus.RUN_ERROR);
+      mutationsDetected = new ArrayList<MutationStatusTestPair>();
+      mutationsDetected.add(new MutationStatusTestPair(0,
+          DetectionStatus.RUN_ERROR));
     } else {
-      mutationDetected = handleCoveredMutation(mutationId, mutatedClass,
+      mutationsDetected = handleCoveredMutation(mutationId, mutatedClass,
           relevantTests);
 
     }
-    return mutationDetected;
+    return mutationsDetected;
   }
 
-  private MutationStatusTestPair handleCoveredMutation(
+  private List<MutationStatusTestPair> handleCoveredMutation(
       final MutationDetails mutationId, final Mutant mutatedClass,
       final List<TestUnit> relevantTests) {
-    MutationStatusTestPair mutationDetected;
+    List<MutationStatusTestPair> mutationsDetected;
     if (DEBUG) {
       LOG.fine("" + relevantTests.size() + " relevant test for "
           + mutatedClass.getDetails().getMethod());
@@ -147,13 +153,14 @@ public class MutationTestWorker {
         LOG.fine("replaced class with mutant in "
             + (System.currentTimeMillis() - t0) + " ms");
       }
-      mutationDetected = doTestsDetectMutation(c, relevantTests);
+      mutationsDetected = doTestsDetectMutation(c, relevantTests);
     } else {
       LOG.warning("Mutation " + mutationId + " was not viable ");
-      mutationDetected = new MutationStatusTestPair(0,
-          DetectionStatus.NON_VIABLE);
+      mutationsDetected = new ArrayList<MutationStatusTestPair>();
+      mutationsDetected.add(new MutationStatusTestPair(0,
+          DetectionStatus.NON_VIABLE));
     }
-    return mutationDetected;
+    return mutationsDetected;
   }
 
   private static Container createNewContainer(final ClassLoader activeloader) {
@@ -188,7 +195,7 @@ public class MutationTestWorker {
         + this.loader + ", hotswap=" + this.hotswap + "]";
   }
 
-  private MutationStatusTestPair doTestsDetectMutation(final Container c,
+  private List<MutationStatusTestPair> doTestsDetectMutation(final Container c,
       final List<TestUnit> tests) {
     try {
       final CheckTestHasFailedResultListener listener = new CheckTestHasFailedResultListener();
@@ -203,20 +210,43 @@ public class MutationTestWorker {
 
   }
 
-  private MutationStatusTestPair createStatusTestPair(
+  private List<MutationStatusTestPair> createStatusTestPair(
       final CheckTestHasFailedResultListener listener) {
-    if (listener.lastFailingTest().hasSome()) {
-      return new MutationStatusTestPair(listener.getNumberOfTestsRun(),
-          listener.status(), listener.lastFailingTest().value()
-              .getQualifiedName());
-    } else {
-      return new MutationStatusTestPair(listener.getNumberOfTestsRun(),
-          listener.status());
-    }
+      return listener.getAllTestResults();
   }
 
   private List<TestUnit> createEarlyExitTestGroup(final List<TestUnit> tests) {
     return Collections.<TestUnit> singletonList(new MultipleTestGroup(tests));
   }
 
+}
+
+class ExtraResultWriter
+{
+  private static ExtraResultWriter instance = new ExtraResultWriter();
+  public static ExtraResultWriter getInstance() {return instance;}
+  private ExtraResultWriter(){}
+
+  public void writeMutationReport(final MutationDetails m, MutationStatusTestPair status)
+  {
+    String line = "";
+    line+=m.getFilename()+",";
+    line+=m.getId().getLocation().getClassName()+",";
+    line+=m.getId().getMutator()+",";
+    line+=m.getId().getLocation().getMethodName()+",";
+    line+=m.getLineNumber()+",";
+    line+=status.getStatus()+",";
+    line+=status.getKillingTest().hasNone()?"none":status.getKillingTest().value();
+    try
+    {
+      BufferedWriter writer = new BufferedWriter( new FileWriter("extra_result.csv", true) );
+      writer.write(line+System.getProperty("line.separator"));
+      writer.flush();
+      writer.close();
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
 }
