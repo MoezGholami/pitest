@@ -268,7 +268,8 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
     this.data.setVerbose(true);
     createAndRun(new TestNGConfiguration(new TestGroupConfig(
         Collections.<String> emptyList(), Collections.<String> emptyList())));
-    verifyResults(KILLED);
+    DetectionStatus expectedResults[] = {KILLED, KILLED};
+    verifyResults(expectedResults);
   }
 
   @Test(timeout = ONE_MINUTE)
@@ -327,6 +328,7 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
   }
 
   @Test
+  @Ignore("we are running all covering tests")
   public void shouldExitAfterFirstFailureWhenTestClassAnnotatedWithBeforeClass() {
     setMutators("RETURN_VALS");
     this.data
@@ -350,7 +352,8 @@ public class MutationCoverageReportSystemTest extends ReportTestBase {
 
     createAndRun();
 
-    verifyResults(KILLED);
+    DetectionStatus expectedResult[] = {KILLED, KILLED, KILLED, KILLED, KILLED, KILLED};
+    verifyResults(expectedResult);
   }
 
   @Test

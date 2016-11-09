@@ -16,7 +16,13 @@ package org.pitest.mutationtest;
 
 import static org.pitest.functional.prelude.Prelude.putToMap;
 
-import java.util.*;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.pitest.functional.F;
@@ -37,8 +43,9 @@ public class MutationStatusMap {
   public void setStatusForMutation(final MutationDetails mutation,
       final MutationStatusTestPair status) {
     this.mutationMap.put(mutation, status);
-    if(status.getKillingTest().hasSome())
+    if (status.getKillingTest().hasSome()) {
       allMutationResults.add(new MutationResult(mutation, status));
+    }
   }
 
   public void setStatusForMutations(
@@ -48,12 +55,13 @@ public class MutationStatusMap {
   }
 
   public List<MutationResult> createMutationResults() {
-    System.err.println("moez: in getting mutation results:: \n"+allMutationResults);
     List<MutationResult> returnValue = new ArrayList<MutationResult>();
     returnValue.addAll(allMutationResults);
-    for(MutationDetails m : mutationMap.keySet())
-      if(mutationMap.get(m).getKillingTest().hasNone())
+    for (MutationDetails m : mutationMap.keySet()) {
+      if (mutationMap.get(m).getKillingTest().hasNone()) {
         returnValue.add(new MutationResult(m, mutationMap.get(m)));
+      }
+    }
 
     return returnValue;
 

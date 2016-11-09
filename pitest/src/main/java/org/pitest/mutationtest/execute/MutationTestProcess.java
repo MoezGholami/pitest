@@ -3,6 +3,7 @@ package org.pitest.mutationtest.execute;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.List;
 
 import org.pitest.mutationtest.MutationStatusMap;
 import org.pitest.mutationtest.MutationStatusTestPair;
@@ -22,7 +23,8 @@ public class MutationTestProcess {
     this.process = new WrappingProcess(socket.getLocalPort(), processArgs,
         MutationTestMinion.class);
     this.thread = new MutationTestCommunicationThread(socket, arguments,
-        new HashMap<MutationIdentifier, MutationStatusTestPair>());
+        new HashMap<MutationIdentifier, MutationStatusTestPair>(),
+        new HashMap<MutationIdentifier, List<MutationStatusTestPair>>());
 
   }
 
@@ -34,9 +36,11 @@ public class MutationTestProcess {
   public void results(final MutationStatusMap allmutations) throws IOException {
 
     for (final MutationDetails each : allmutations.allMutations()) {
-      final MutationStatusTestPair status = this.thread.getStatus(each.getId());
-      if (status != null) {
-        allmutations.setStatusForMutation(each, status);
+      final List<MutationStatusTestPair> allStatuses = this.thread.getStatus(each.getId());
+      if (allStatuses != null) {
+        for (MutationStatusTestPair status : allStatuses) {
+          allmutations.setStatusForMutation(each, status);
+        }
       }
     }
 

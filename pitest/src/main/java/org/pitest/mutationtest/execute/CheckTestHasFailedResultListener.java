@@ -32,10 +32,15 @@ public class CheckTestHasFailedResultListener implements TestListener {
 
   public List<MutationStatusTestPair> getAllTestResults() {
     List<MutationStatusTestPair> result = new ArrayList<MutationStatusTestPair>();
-    for (Option<Description> d : allTestsRun) {
-      result.add(new MutationStatusTestPair(testsRun,
-              d.hasSome() ? DetectionStatus.KILLED : DetectionStatus.KILLED.SURVIVED,
-              d.value().getQualifiedName()));
+    //Option<Description> d = lastFailingTest;
+    if (lastFailingTest.hasSome()) {
+      for (Option<Description> d : allTestsRun) {
+        result.add(new MutationStatusTestPair(testsRun,
+                DetectionStatus.KILLED,
+                d.value().getQualifiedName()));
+      }
+    } else {
+      result.add(new MutationStatusTestPair(testsRun, DetectionStatus.SURVIVED));
     }
     return result;
   }
@@ -58,7 +63,6 @@ public class CheckTestHasFailedResultListener implements TestListener {
 
   @Override
   public void onTestSuccess(final TestResult tr) {
-    allTestsRun.add(Option.some(tr.getDescription()));
 
   }
 
@@ -70,6 +74,21 @@ public class CheckTestHasFailedResultListener implements TestListener {
   @Override
   public void onRunStart() {
 
+  }
+  public DetectionStatus status() {
+    if (this.lastFailingTest.hasSome()) {
+      return DetectionStatus.KILLED;
+    } else {
+    return DetectionStatus.SURVIVED;
+    }
+  }
+
+  public Option<Description> lastFailingTest() {
+    return this.lastFailingTest;
+  }
+
+  public int getNumberOfTestsRun() {
+    return this.testsRun;
   }
 
 }

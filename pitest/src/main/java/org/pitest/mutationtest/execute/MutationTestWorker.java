@@ -16,8 +16,6 @@ package org.pitest.mutationtest.execute;
 
 import static org.pitest.util.Unchecked.translateCheckedException;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -70,8 +68,6 @@ public class MutationTestWorker {
 
   protected void run(final Collection<MutationDetails> range, final Reporter r,
       final TimeOutDecoratedTestSource testSource) throws IOException {
-    try{ throw new RuntimeException("moez: detecting std out/err call chain");}catch (Throwable e) {e.printStackTrace();}
-
     for (final MutationDetails mutation : range) {
       if (DEBUG) {
         LOG.fine("Running mutation " + mutation);
@@ -110,7 +106,6 @@ public class MutationTestWorker {
         mutationDetails, mutatedClass, relevantTests);
     for (MutationStatusTestPair mstp : mutationsDetected) {
         r.report(mutationId, mstp);
-		ExtraResultWriter.getInstance().writeMutationReport(mutationDetails, mstp);
     }
     if (DEBUG) {
       LOG.fine("Mutation " + mutationId + " detected = " + mutationsDetected);
@@ -219,34 +214,4 @@ public class MutationTestWorker {
     return Collections.<TestUnit> singletonList(new MultipleTestGroup(tests));
   }
 
-}
-
-class ExtraResultWriter
-{
-  private static ExtraResultWriter instance = new ExtraResultWriter();
-  public static ExtraResultWriter getInstance() {return instance;}
-  private ExtraResultWriter(){}
-
-  public void writeMutationReport(final MutationDetails m, MutationStatusTestPair status)
-  {
-    String line = "";
-    line+=m.getFilename()+",";
-    line+=m.getId().getLocation().getClassName()+",";
-    line+=m.getId().getMutator()+",";
-    line+=m.getId().getLocation().getMethodName()+",";
-    line+=m.getLineNumber()+",";
-    line+=status.getStatus()+",";
-    line+=status.getKillingTest().hasNone()?"none":status.getKillingTest().value();
-    try
-    {
-      BufferedWriter writer = new BufferedWriter( new FileWriter("extra_result.csv", true) );
-      writer.write(line+System.getProperty("line.separator"));
-      writer.flush();
-      writer.close();
-    }
-    catch (IOException e)
-    {
-      e.printStackTrace();
-    }
-  }
 }

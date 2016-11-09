@@ -15,6 +15,8 @@
 package org.pitest.mutationtest.execute;
 
 import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -50,9 +52,12 @@ public class MutationTestCommunicationThread extends CommunicationThread {
   private static class Receive implements ReceiveStrategy {
 
     private final Map<MutationIdentifier, MutationStatusTestPair> idMap;
+    private final Map<MutationIdentifier, List<MutationStatusTestPair>> allPairsMap;
 
-    Receive(final Map<MutationIdentifier, MutationStatusTestPair> idMap) {
+    Receive(final Map<MutationIdentifier, MutationStatusTestPair> idMap,
+            final Map<MutationIdentifier, List<MutationStatusTestPair>> allPairsMap) {
       this.idMap = idMap;
+      this.allPairsMap = allPairsMap;
     }
 
     @Override
@@ -71,6 +76,9 @@ public class MutationTestCommunicationThread extends CommunicationThread {
       final MutationIdentifier mutation = is.read(MutationIdentifier.class);
       final MutationStatusTestPair value = is
           .read(MutationStatusTestPair.class);
+      if (value.getKillingTest().hasSome()) {
+        pairsOfMutationId(mutation).add(value);
+      }
       this.idMap.put(mutation, value);
       LOG.fine(mutation + " " + value);
     }
@@ -81,19 +89,42 @@ public class MutationTestCommunicationThread extends CommunicationThread {
           DetectionStatus.STARTED));
     }
 
+    private List<MutationStatusTestPair> pairsOfMutationId(MutationIdentifier mid)
+    {
+      if (allPairsMap.containsKey(mid)) {
+        return allPairsMap.get(mid);
+      }
+      List<MutationStatusTestPair> entry = new ArrayList<MutationStatusTestPair>();
+      allPairsMap.put(mid, entry);
+      return entry;
+    }
   }
 
   private final Map<MutationIdentifier, MutationStatusTestPair> idMap;
+  private final Map<MutationIdentifier, List<MutationStatusTestPair>> allPairsMap;
+
 
   public MutationTestCommunicationThread(final ServerSocket socket,
       final MinionArguments arguments,
-      final Map<MutationIdentifier, MutationStatusTestPair> idMap) {
-    super(socket, new SendData(arguments), new Receive(idMap));
+      final Map<MutationIdentifier, MutationStatusTestPair> idMap,
+      final Map<MutationIdentifier, List<MutationStatusTestPair> > allPairsMap) {
+    super(socket, new SendData(arguments), new Receive(idMap, allPairsMap));
     this.idMap = idMap;
+    this.allPairsMap = allPairsMap;
   }
 
-  public MutationStatusTestPair getStatus(final MutationIdentifier id) {
-    return this.idMap.get(id);
+  public List<MutationStatusTestPair> getStatus(final MutationIdentifier id) {
+    if (! this.idMap.containsKey(id)) {
+      return null;
+    }
+    List<MutationStatusTestPair> returnValue = new ArrayList<MutationStatusTestPair>();
+    if (this.idMap.get(id).getKillingTest().hasNone()) {
+      returnValue.add(this.idMap.get(id));
+    }
+    if (this.allPairsMap.containsKey(id)) {
+      returnValue.addAll(allPairsMap.get(id));
+    }
+    return returnValue;
   }
 
 }
