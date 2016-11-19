@@ -27,16 +27,23 @@ import java.util.List;
 public class CheckTestHasFailedResultListener implements TestListener {
 
   private Option<Description> lastFailingTest = Option.none();
-  private ArrayList<Option<Description>> allTestsRun = new ArrayList<Option<Description>>();
+  private ArrayList<TestResult> allTestResults = new ArrayList<TestResult>();
   private int                 testsRun        = 0;
 
   public List<MutationStatusTestPair> getAllTestResults() {
     List<MutationStatusTestPair> result = new ArrayList<MutationStatusTestPair>();
-    //Option<Description> d = lastFailingTest;
+    Option<Description> d;
+    DetectionStatus status;
     if (lastFailingTest.hasSome()) {
-      for (Option<Description> d : allTestsRun) {
-        result.add(new MutationStatusTestPair(testsRun,
-                DetectionStatus.KILLED,
+      for (TestResult tr : allTestResults) {
+        if (tr.getThrowable().toString().contains("TimeoutException")
+                || tr.getThrowable().toString().contains("test timed out")) {
+          status = DetectionStatus.TIMED_OUT;
+        } else {
+          status = DetectionStatus.KILLED;
+        }
+        d = Option.some(tr.getDescription());
+        result.add(new MutationStatusTestPair(testsRun, status,
                 d.value().getQualifiedName()));
       }
     } else {
@@ -48,7 +55,7 @@ public class CheckTestHasFailedResultListener implements TestListener {
   @Override
   public void onTestFailure(final TestResult tr) {
     this.lastFailingTest = Option.some(tr.getDescription());
-    allTestsRun.add(Option.some(tr.getDescription()));
+    allTestResults.add(tr);
   }
 
   @Override

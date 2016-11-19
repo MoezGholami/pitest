@@ -50,7 +50,9 @@ public final class MutationTimeoutDecorator extends TestUnitDecorator {
     final FutureTask<?> future = createFutureForChildTestUnit(loader, rc);
     executeFutureWithTimeOut(maxTime, future, rc);
     if (!future.isDone()) {
-      this.timeOutSideEffect.apply();
+      if (this.timeOutSideEffect != null) {
+        this.timeOutSideEffect.apply();
+      }
     }
 
   }
@@ -59,10 +61,12 @@ public final class MutationTimeoutDecorator extends TestUnitDecorator {
       final FutureTask<?> future, final ResultCollector rc) {
     try {
       future.get(maxTime, TimeUnit.MILLISECONDS);
-    } catch (final TimeoutException ex) {
-      // swallow
     } catch (final InterruptedException e) {
       // swallow
+    } catch (final TimeoutException e) {
+      if (this.timeOutSideEffect == null) {
+        rc.notifyEnd(child().getDescription(), e);
+      } // otherwise swallow
     } catch (final ExecutionException e) {
       throw Unchecked.translateCheckedException(e);
     }

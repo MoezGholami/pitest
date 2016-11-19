@@ -36,7 +36,6 @@ public class MutationAnalysisExecutor {
 
   // entry point for mutation testing
   public void run(final List<MutationAnalysisUnit> testUnits) {
-
     LOG.fine("Running " + testUnits.size() + " units");
 
     signalRunStartToAllListeners();

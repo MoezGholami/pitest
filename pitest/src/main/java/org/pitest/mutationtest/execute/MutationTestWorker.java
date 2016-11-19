@@ -159,16 +159,7 @@ public class MutationTestWorker {
   }
 
   private static Container createNewContainer(final ClassLoader activeloader) {
-    final Container c = new UnContainer() {
-      @Override
-      public List<TestResult> execute(final TestUnit group) {
-        List<TestResult> results = new ArrayList<TestResult>();
-        final ExitingResultCollector rc = new ExitingResultCollector(
-            new ConcreteResultCollector(results));
-        group.execute(activeloader, rc);
-        return results;
-      }
-    };
+    final Container c = new MutationTestExecutionUnContainer(activeloader);
     return c;
   }
 
@@ -214,4 +205,19 @@ public class MutationTestWorker {
     return Collections.<TestUnit> singletonList(new MultipleTestGroup(tests));
   }
 
+}
+
+class MutationTestExecutionUnContainer extends UnContainer {
+      private ClassLoader classLoader;
+      public MutationTestExecutionUnContainer(ClassLoader classLoader) {
+        this.classLoader = classLoader;
+      }
+      @Override
+      public List<TestResult> execute(final TestUnit group) {
+        List<TestResult> results = new ArrayList<TestResult>();
+        final ExitingResultCollector rc = new ExitingResultCollector(
+            new ConcreteResultCollector(results));
+        group.execute(classLoader, rc);
+        return results;
+      }
 }

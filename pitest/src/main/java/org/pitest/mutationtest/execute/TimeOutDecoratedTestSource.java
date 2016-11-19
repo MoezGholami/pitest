@@ -59,9 +59,7 @@ public class TimeOutDecoratedTestSource {
             .getName());
         if (tu != null) {
           return Option
-              .<TestUnit> some(new MutationTimeoutDecorator(tu,
-                  new TimeOutSystemExitSideEffect(
-                      TimeOutDecoratedTestSource.this.r),
+              .<TestUnit> some(new MutationTimeoutDecorator(tu, null,
                       TimeOutDecoratedTestSource.this.timeoutStrategy, a.getTime()));
         }
         return Option.none();
